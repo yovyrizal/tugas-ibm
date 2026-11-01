@@ -1,0 +1,88 @@
+<%- include('partials/header') %>
+
+<!-- Weekly Schedule -->
+<div class="schedule-header-bar">
+  <div class="schedule-legend">
+    <span class="sleg-item"><span class="sleg-dot" style="background:#3b82f6"></span> Meeting</span>
+    <span class="sleg-item"><span class="sleg-dot" style="background:#8b5cf6"></span> Pekerjaan</span>
+    <span class="sleg-item"><span class="sleg-dot" style="background:#10b981"></span> Belajar</span>
+    <span class="sleg-item"><span class="sleg-dot" style="background:#f59e0b"></span> Pribadi</span>
+  </div>
+</div>
+
+<div class="weekly-grid">
+  <% days.forEach(day => {
+    const daySchedules = scheduleByDay[day] || [];
+    const dayJsMap = { 'Minggu':0,'Senin':1,'Selasa':2,'Rabu':3,'Kamis':4,'Jumat':5,'Sabtu':6 };
+    const isToday = new Date().getDay() === dayJsMap[day];
+  %>
+  <div class="day-column <%= isToday ? 'today' : '' %>">
+    <div class="day-header">
+      <span class="day-name"><%= day %></span>
+      <span class="day-count"><%= daySchedules.length %> agenda</span>
+      <% if (isToday) { %><span class="today-badge">Hari Ini</span><% } %>
+    </div>
+    <div class="day-body">
+      <% if (daySchedules.length === 0) { %>
+      <div class="no-schedule">Bebas 🎉</div>
+      <% } else { %>
+        <% daySchedules.forEach(item => { %>
+        <div class="schedule-block" style="border-left: 4px solid <%= item.color %>">
+          <div class="sblock-time"><%= item.time %> – <%= item.endTime %></div>
+          <div class="sblock-title"><%= item.title %></div>
+          <div class="sblock-loc">📍 <%= item.location %></div>
+          <% if (item.isRecurring) { %>
+          <span class="sblock-recurring">🔁 Berulang</span>
+          <% } %>
+        </div>
+        <% }); %>
+      <% } %>
+    </div>
+  </div>
+  <% }); %>
+</div>
+
+<!-- Schedule Summary -->
+<div class="card schedule-summary-card">
+  <div class="card-header">
+    <h2 class="card-title">📈 Ringkasan Jadwal Mingguan</h2>
+  </div>
+  <div class="summary-stats-grid">
+    <%
+      const types = { meeting: 0, work: 0, study: 0, personal: 0 };
+      schedules.forEach(s => { if (types[s.type] !== undefined) types[s.type]++; });
+    %>
+    <div class="summary-stat">
+      <span class="ss-icon">🤝</span>
+      <span class="ss-value"><%= types.meeting %></span>
+      <span class="ss-label">Meeting</span>
+    </div>
+    <div class="summary-stat">
+      <span class="ss-icon">💻</span>
+      <span class="ss-value"><%= types.work %></span>
+      <span class="ss-label">Pekerjaan</span>
+    </div>
+    <div class="summary-stat">
+      <span class="ss-icon">📚</span>
+      <span class="ss-value"><%= types.study %></span>
+      <span class="ss-label">Belajar</span>
+    </div>
+    <div class="summary-stat">
+      <span class="ss-icon">🏃</span>
+      <span class="ss-value"><%= types.personal %></span>
+      <span class="ss-label">Pribadi</span>
+    </div>
+    <div class="summary-stat">
+      <span class="ss-icon">🔁</span>
+      <span class="ss-value"><%= schedules.filter(s => s.isRecurring).length %></span>
+      <span class="ss-label">Berulang</span>
+    </div>
+    <div class="summary-stat">
+      <span class="ss-icon">📅</span>
+      <span class="ss-value"><%= schedules.length %></span>
+      <span class="ss-label">Total Agenda</span>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

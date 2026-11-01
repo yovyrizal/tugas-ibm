@@ -1,0 +1,174 @@
+<%- include('partials/header') %>
+
+<%
+function statusLabel(s) {
+  const map = { 'todo': 'Belum Mulai', 'in-progress': 'Sedang Dikerjakan', 'done': 'Selesai' };
+  return map[s] || s;
+}
+function priorityLabel(p) {
+  const map = { 'high': 'Tinggi', 'medium': 'Sedang', 'low': 'Rendah' };
+  return map[p] || p;
+}
+function daysLeft(deadline) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(deadline);
+  const diff = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+  return diff;
+}
+%>
+
+<!-- Filter Bar -->
+<div class="filter-bar card">
+  <form action="/tasks" method="GET" class="filter-form">
+    <div class="filter-group">
+      <label>Cari</label>
+      <input type="text" name="search" placeholder="Cari tugas..." value="<%= filters.search %>" class="filter-input" />
+    </div>
+    <div class="filter-group">
+      <label>Status</label>
+      <select name="status" class="filter-select">
+        <option value="all" <%= filters.status === 'all' ? 'selected' : '' %>>Semua Status</option>
+        <option value="todo" <%= filters.status === 'todo' ? 'selected' : '' %>>Belum Mulai</option>
+        <option value="in-progress" <%= filters.status === 'in-progress' ? 'selected' : '' %>>Sedang Dikerjakan</option>
+        <option value="done" <%= filters.status === 'done' ? 'selected' : '' %>>Selesai</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Prioritas</label>
+      <select name="priority" class="filter-select">
+        <option value="all" <%= filters.priority === 'all' ? 'selected' : '' %>>Semua Prioritas</option>
+        <option value="high" <%= filters.priority === 'high' ? 'selected' : '' %>>Tinggi</option>
+        <option value="medium" <%= filters.priority === 'medium' ? 'selected' : '' %>>Sedang</option>
+        <option value="low" <%= filters.priority === 'low' ? 'selected' : '' %>>Rendah</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Kategori</label>
+      <select name="category" class="filter-select">
+        <option value="all" <%= filters.category === 'all' ? 'selected' : '' %>>Semua Kategori</option>
+        <% categories.forEach(cat => { %>
+        <option value="<%= cat %>" <%= filters.category === cat ? 'selected' : '' %>><%= cat %></option>
+        <% }); %>
+      </select>
+    </div>
+    <button type="submit" class="btn-filter">🔍 Filter</button>
+    <a href="/tasks" class="btn-reset">Reset</a>
+  </form>
+</div>
+
+<!-- Stats Row -->
+<div class="tasks-stats-row">
+  <span class="tasks-count"><strong><%= tasks.length %></strong> tugas ditemukan</span>
+  <div class="mini-stats">
+    <span class="mini-stat mini-done">✅ <%= stats.done %> selesai</span>
+    <span class="mini-stat mini-progress">⚡ <%= stats.inProgress %> dikerjakan</span>
+    <span class="mini-stat mini-todo">📋 <%= stats.todo %> pending</span>
+  </div>
+</div>
+
+<!-- Tasks Table -->
+<div class="card tasks-table-card">
+  <% if (tasks.length === 0) { %>
+  <div class="empty-state large">
+    <span>🔍</span>
+    <p>Tidak ada tugas yang cocok dengan filter.</p>
+    <a href="/tasks" class="btn-reset">Reset Filter</a>
+  </div>
+  <% } else { %>
+  <div class="table-wrapper">
+    <table class="tasks-table">
+      <thead>
+        <tr>
+          <th>Tugas</th>
+          <th>Kategori</th>
+          <th>Prioritas</th>
+          <th>Status</th>
+          <th>Deadline</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% tasks.forEach(task => {
+          const dl = daysLeft(task.deadline);
+        %>
+        <tr class="task-row task-row--<%= task.status %>" data-id="<%= task.id %>">
+          <td class="task-cell-title">
+            <span class="task-title-text <%= task.status === 'done' ? 'done' : '' %>"><%= task.title %></span>
+            <span class="task-desc"><%= task.description %></span>
+          </td>
+          <td><span class="category-tag"><%= task.category %></span></td>
+          <td><span class="priority-badge priority-<%= task.priority %>"><%= priorityLabel(task.priority) %></span></td>
+          <td>
+            <select class="status-select" data-id="<%= task.id %>">
+              <option value="todo" <%= task.status === 'todo' ? 'selected' : '' %>>Belum Mulai</option>
+              <option value="in-progress" <%= task.status === 'in-progress' ? 'selected' : '' %>>Dikerjakan</option>
+              <option value="done" <%= task.status === 'done' ? 'selected' : '' %>>Selesai</option>
+            </select>
+          </td>
+          <td>
+            <span class="deadline-text <%= dl < 0 ? 'overdue' : dl <= 2 ? 'urgent' : '' %>">
+              <%= new Date(task.deadline).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) %>
+            </span>
+            <span class="days-left">
+              <%= dl < 0 ? '(' + Math.abs(dl) + ' hari lalu)' : dl === 0 ? '(Hari ini)' : '(' + dl + ' hari lagi)' %>
+            </span>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn-action btn-complete" title="Tandai Selesai"
+                onclick="updateStatus(<%= task.id %>, 'done')">✓</button>
+              <button class="btn-action btn-progress" title="Sedang Dikerjakan"
+                onclick="updateStatus(<%= task.id %>, 'in-progress')">⚡</button>
+            </div>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>
+
+<script>
+document.querySelectorAll('.status-select').forEach(sel => {
+  sel.addEventListener('change', function() {
+    updateStatus(parseInt(this.dataset.id), this.value);
+  });
+});
+
+async function updateStatus(id, status) {
+  try {
+    const res = await fetch('/api/tasks/' + id + '/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const row = document.querySelector('.task-row[data-id="' + id + '"]');
+      if (row) {
+        row.className = 'task-row task-row--' + status;
+        const titleEl = row.querySelector('.task-title-text');
+        if (titleEl) titleEl.classList.toggle('done', status === 'done');
+        const sel = row.querySelector('.status-select');
+        if (sel) sel.value = status;
+      }
+      showToast('Status tugas diperbarui! ✅');
+    }
+  } catch(e) {
+    showToast('Gagal memperbarui status.', 'error');
+  }
+}
+
+function showToast(msg, type) {
+  type = type || 'success';
+  const t = document.createElement('div');
+  t.className = 'toast toast--' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 2500);
+}
+</script>
+
+<%- include('partials/footer') %>

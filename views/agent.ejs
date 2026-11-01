@@ -1,0 +1,362 @@
+<%- include('partials/header') %>
+
+<div class="agent-page">
+
+  <!-- Setup Warning Banner (jika API key belum diisi) -->
+  <% if (!hasApiKey) { %>
+  <div class="agent-setup-banner">
+    <div class="setup-icon">⚠️</div>
+    <div class="setup-text">
+      <strong>Setup Diperlukan</strong>
+      <p>Buat file <code>.env</code> di folder project dan isi <code>GROQ_API_KEY=&lt;api_key_kamu&gt;</code>, lalu restart server.</p>
+      <a href="https://console.groq.com/keys" target="_blank" class="setup-link">Dapatkan API Key Groq gratis →</a>
+    </div>
+  </div>
+  <% } %>
+
+  <div class="agent-layout">
+
+    <!-- Left: Chat Panel -->
+    <div class="chat-panel">
+      <div class="chat-header">
+        <div class="aria-avatar">🤖</div>
+        <div class="aria-info">
+          <span class="aria-name">Aria</span>
+          <span class="aria-desc">AI Assistant • Powered by Groq (Llama 3.3)</span>
+        </div>
+        <div class="chat-actions">
+          <button class="btn-clear-chat" id="clearChatBtn" title="Reset percakapan">🗑 Reset</button>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-message message-aria">
+          <div class="message-avatar">🤖</div>
+          <div class="message-bubble">
+            <p>Halo! Saya <strong>Aria</strong>, asisten AI pribadimu. Saya bisa membantu kamu dengan:</p>
+            <ul>
+              <li>📋 Mengecek dan mengelola tugas-tugasmu</li>
+              <li>📅 Melihat jadwal hari ini atau mingguan</li>
+              <li>🎯 Menyarankan prioritas pengerjaan tugas</li>
+              <li>✅ Menandai tugas sebagai selesai atau dalam pengerjaan</li>
+              <li>📊 Merangkum statistik produktivitasmu</li>
+            </ul>
+            <p>Apa yang bisa saya bantu hari ini?</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="typing-indicator" id="typingIndicator" style="display:none">
+        <div class="message-avatar">🤖</div>
+        <div class="typing-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <span class="typing-label">Aria sedang berpikir...</span>
+      </div>
+
+      <!-- Input Area -->
+      <div class="chat-input-area">
+        <div class="chat-input-wrapper">
+          <textarea
+            id="chatInput"
+            class="chat-input"
+            placeholder="Tanya sesuatu... (contoh: 'Tugas apa yang harus saya selesaikan hari ini?')"
+            rows="1"
+            ></textarea>
+          <button id="sendBtn" class="btn-send" title="Kirim pesan">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+        <div class="chat-hints">
+          <span class="hint-label">Coba tanya:</span>
+          <button class="hint-chip" onclick="sendHint('Tugas apa yang paling mendesak?')">Tugas mendesak?</button>
+          <button class="hint-chip" onclick="sendHint('Jadwal saya hari ini apa saja?')">Jadwal hari ini</button>
+          <button class="hint-chip" onclick="sendHint('Berapa tugas yang sudah selesai?')">Statistik tugas</button>
+          <button class="hint-chip" onclick="sendHint('Bantu saya prioritaskan tugas yang belum selesai')">Saran prioritas</button>
+          <button class="hint-chip" onclick="sendHint('Adakah tugas yang sudah terlambat?')">Tugas terlambat</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Tool Activity Log + Info -->
+    <div class="agent-sidebar">
+
+      <!-- Agent Info -->
+      <div class="agent-info-card card">
+        <h3 class="card-title">🧠 Tentang AI Agent</h3>
+        <div class="agent-info-body">
+          <div class="info-row">
+            <span class="info-label">Model</span>
+            <span class="info-value model-badge">Llama 3 70B</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Provider</span>
+            <span class="info-value">Groq</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Arsitektur</span>
+            <span class="info-value">ReAct Agent</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="info-value status-dot" id="agentStatus">
+              <% if (hasApiKey) { %>
+              <span class="dot dot-green"></span> Siap
+              <% } else { %>
+              <span class="dot dot-red"></span> Perlu Setup
+              <% } %>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Available Tools -->
+      <div class="tools-card card">
+        <h3 class="card-title">🔧 Tools Tersedia</h3>
+        <div class="tools-list">
+          <div class="tool-item"><span class="tool-icon">📋</span><span>Lihat semua tugas</span></div>
+          <div class="tool-item"><span class="tool-icon">🔍</span><span>Filter by status/prioritas</span></div>
+          <div class="tool-item"><span class="tool-icon">⚠️</span><span>Cek tugas terlambat</span></div>
+          <div class="tool-item"><span class="tool-icon">📅</span><span>Jadwal hari ini & mingguan</span></div>
+          <div class="tool-item"><span class="tool-icon">✅</span><span>Update status tugas</span></div>
+          <div class="tool-item"><span class="tool-icon">📊</span><span>Statistik dashboard</span></div>
+          <div class="tool-item"><span class="tool-icon">🎯</span><span>Saran prioritisasi</span></div>
+        </div>
+      </div>
+
+      <!-- Tool Activity Log -->
+      <div class="activity-card card">
+        <div class="card-header">
+          <h3 class="card-title">⚙️ Tool Activity</h3>
+          <span class="activity-count" id="activityCount">0 calls</span>
+        </div>
+        <div class="activity-log" id="activityLog">
+          <div class="activity-empty">Belum ada tool yang dipanggil.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const chatMessages = document.getElementById('chatMessages');
+  const chatInput = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const typingIndicator = document.getElementById('typingIndicator');
+  const activityLog = document.getElementById('activityLog');
+  const activityCount = document.getElementById('activityCount');
+  const clearChatBtn = document.getElementById('clearChatBtn');
+
+  let sessionId = 'session_' + Date.now();
+  let totalToolCalls = 0;
+  let isLoading = false;
+
+  // ── Auto-resize textarea ──────────────────────
+  chatInput.addEventListener('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+  });
+
+  // ── Send on Enter (Shift+Enter = newline) ─────
+  chatInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  sendBtn.addEventListener('click', sendMessage);
+  clearChatBtn.addEventListener('click', clearChat);
+
+  // ── Send hint chip ────────────────────────────
+  window.sendHint = function (text) {
+    chatInput.value = text;
+    sendMessage();
+  };
+
+  // ── Main send function ────────────────────────
+  async function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text || isLoading) return;
+
+    isLoading = true;
+    sendBtn.disabled = true;
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+
+    // Append user message
+    appendMessage('user', text);
+
+    // Show typing
+    typingIndicator.style.display = 'flex';
+    scrollToBottom();
+
+    try {
+      const res = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, sessionId })
+      });
+
+      const data = await res.json();
+      typingIndicator.style.display = 'none';
+
+      if (!res.ok) {
+        appendMessage('error', data.error || 'Terjadi kesalahan.');
+        if (data.setupRequired) {
+          appendSetupBanner();
+        }
+      } else {
+        sessionId = data.sessionId || sessionId;
+        appendMessage('aria', data.reply);
+        if (data.toolCallLog && data.toolCallLog.length > 0) {
+          appendToolActivity(data.toolCallLog);
+        }
+      }
+    } catch (e) {
+      typingIndicator.style.display = 'none';
+      appendMessage('error', 'Tidak bisa terhubung ke server. Pastikan server berjalan.');
+    }
+
+    isLoading = false;
+    sendBtn.disabled = false;
+    scrollToBottom();
+  }
+
+  // ── Append message to chat ────────────────────
+  function appendMessage(role, text) {
+    const wrap = document.createElement('div');
+
+    if (role === 'user') {
+      wrap.className = 'chat-message message-user';
+      wrap.innerHTML = `
+        <div class="message-bubble">${escHtml(text).replace(/\n/g, '<br>')}</div>
+        <div class="message-avatar user-avatar-sm">AS</div>`;
+    } else if (role === 'aria') {
+      wrap.className = 'chat-message message-aria';
+      wrap.innerHTML = `
+        <div class="message-avatar">🤖</div>
+        <div class="message-bubble">${markdownToHtml(text)}</div>`;
+    } else {
+      wrap.className = 'chat-message message-error';
+      wrap.innerHTML = `
+        <div class="message-avatar">⚠️</div>
+        <div class="message-bubble error-bubble">${escHtml(text)}</div>`;
+    }
+
+    // Append timestamp
+    const ts = document.createElement('div');
+    ts.className = 'message-time';
+    ts.textContent = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    wrap.querySelector('.message-bubble').appendChild(ts);
+
+    chatMessages.appendChild(wrap);
+    scrollToBottom();
+  }
+
+  function appendSetupBanner() {
+    const div = document.createElement('div');
+    div.className = 'inline-setup-notice';
+    div.innerHTML = `
+      <p>⚙️ <strong>Setup API Key:</strong> Buat file <code>.env</code> di folder project:</p>
+      <pre>GROQ_API_KEY=gsk_xxxxxxxxxx</pre>
+      <a href="https://console.groq.com/keys" target="_blank">Daftar & ambil API key gratis →</a>`;
+    chatMessages.appendChild(div);
+  }
+
+  // ── Tool Activity Log ─────────────────────────
+  function appendToolActivity(toolCalls) {
+    // Clear empty state
+    const emptyEl = activityLog.querySelector('.activity-empty');
+    if (emptyEl) emptyEl.remove();
+
+    toolCalls.forEach(tc => {
+      totalToolCalls++;
+      const item = document.createElement('div');
+      item.className = 'activity-item';
+      item.innerHTML = `
+        <div class="activity-header">
+          <span class="activity-tool">${escHtml(tc.tool)}</span>
+          <span class="activity-num">#${totalToolCalls}</span>
+        </div>
+        ${Object.keys(tc.args).length > 0
+          ? `<div class="activity-args">${JSON.stringify(tc.args)}</div>`
+          : ''}
+        <div class="activity-result">${escHtml(JSON.stringify(tc.result).slice(0, 120))}${JSON.stringify(tc.result).length > 120 ? '…' : ''}</div>`;
+      activityLog.insertBefore(item, activityLog.firstChild);
+    });
+
+    activityCount.textContent = totalToolCalls + ' calls';
+  }
+
+  // ── Clear chat ────────────────────────────────
+  async function clearChat() {
+    if (!confirm('Reset percakapan dengan Aria?')) return;
+
+    try {
+      await fetch('/api/agent/session/' + sessionId, { method: 'DELETE' });
+    } catch (_) {}
+
+    sessionId = 'session_' + Date.now();
+    totalToolCalls = 0;
+    activityCount.textContent = '0 calls';
+
+    chatMessages.innerHTML = `
+      <div class="chat-message message-aria">
+        <div class="message-avatar">🤖</div>
+        <div class="message-bubble">
+          <p>Percakapan direset. Ada yang bisa saya bantu? 😊</p>
+          <div class="message-time">${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+      </div>`;
+
+    activityLog.innerHTML = '<div class="activity-empty">Belum ada tool yang dipanggil.</div>';
+  }
+
+  // ── Helpers ───────────────────────────────────
+  function scrollToBottom() {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // Minimal markdown → HTML (bold, italic, lists, inline code)
+  function markdownToHtml(text) {
+    return text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      // code blocks
+      .replace(/```[\s\S]*?```/g, m => `<pre><code>${m.slice(3, -3).trim()}</code></pre>`)
+      // bold
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // italic
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // inline code
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      // numbered list
+      .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+      // bullet list
+      .replace(/^[-•]\s+(.+)$/gm, '<li>$1</li>')
+      // wrap consecutive <li>
+      .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+      // newlines
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br>');
+  }
+
+})();
+</script>
+
+<%- include('partials/footer') %>

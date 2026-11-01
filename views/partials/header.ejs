@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %> — MyDashboard</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">📊</div>
+      <div class="brand-text">
+        <span class="brand-title">MyDashboard</span>
+        <span class="brand-sub">Pribadi</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/" class="nav-item <%= currentPage === 'dashboard' ? 'active' : '' %>">
+        <span class="nav-icon">🏠</span>
+        <span>Dashboard</span>
+      </a>
+      <a href="/tasks" class="nav-item <%= currentPage === 'tasks' ? 'active' : '' %>">
+        <span class="nav-icon">✅</span>
+        <span>Tugas</span>
+      </a>
+      <a href="/schedule" class="nav-item <%= currentPage === 'schedule' ? 'active' : '' %>">
+        <span class="nav-icon">📅</span>
+        <span>Jadwal</span>
+      </a>
+      <a href="/agent" class="nav-item <%= currentPage === 'agent' ? 'active' : '' %> nav-item--agent">
+        <span class="nav-icon">🤖</span>
+        <span>AI Agent</span>
+        <span class="nav-badge-new">NEW</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">AS</div>
+        <div class="user-info">
+          <span class="user-name">Andi Saputra</span>
+          <span class="user-role">Web Developer</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        <h1 class="page-title"><%= title %></h1>
+        <span class="page-date" id="currentDateTime"></span>
+      </div>
+      <div class="topbar-right">
+        <div class="notification-badge" title="Tugas mendesak">
+          🔔 <span class="badge" id="notifCount">0</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="content-area">

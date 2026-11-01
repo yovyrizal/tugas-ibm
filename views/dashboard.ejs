@@ -1,0 +1,217 @@
+<%- include('partials/header') %>
+
+<%
+function statusLabel(s) {
+  const map = { 'todo': 'Belum Mulai', 'in-progress': 'Sedang Dikerjakan', 'done': 'Selesai' };
+  return map[s] || s;
+}
+function priorityLabel(p) {
+  const map = { 'high': 'Tinggi', 'medium': 'Sedang', 'low': 'Rendah' };
+  return map[p] || p;
+}
+function daysLeft(deadline) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(deadline);
+  const diff = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+  return diff;
+}
+%>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+  <div class="stat-card stat-total">
+    <div class="stat-icon">📋</div>
+    <div class="stat-info">
+      <span class="stat-value"><%= stats.total %></span>
+      <span class="stat-label">Total Tugas</span>
+    </div>
+    <div class="stat-progress-bar">
+      <div class="stat-progress-fill" style="width: <%= stats.completionRate %>%"></div>
+    </div>
+    <span class="stat-sub"><%= stats.completionRate %>% selesai</span>
+  </div>
+
+  <div class="stat-card stat-done">
+    <div class="stat-icon">✅</div>
+    <div class="stat-info">
+      <span class="stat-value"><%= stats.done %></span>
+      <span class="stat-label">Selesai</span>
+    </div>
+    <div class="stat-badge badge-done"><%= stats.completionRate %>%</div>
+  </div>
+
+  <div class="stat-card stat-progress-card">
+    <div class="stat-icon">⚡</div>
+    <div class="stat-info">
+      <span class="stat-value"><%= stats.inProgress %></span>
+      <span class="stat-label">Sedang Dikerjakan</span>
+    </div>
+    <div class="stat-badge badge-progress">Aktif</div>
+  </div>
+
+  <div class="stat-card stat-urgent">
+    <div class="stat-icon">🔥</div>
+    <div class="stat-info">
+      <span class="stat-value"><%= stats.highPriority %></span>
+      <span class="stat-label">Prioritas Tinggi</span>
+    </div>
+    <% if (stats.overdue > 0) { %>
+    <div class="stat-badge badge-overdue"><%= stats.overdue %> terlambat</div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Main Grid: Tasks + Today's Schedule -->
+<div class="dashboard-grid">
+  <!-- Upcoming Tasks -->
+  <section class="card tasks-card">
+    <div class="card-header">
+      <h2 class="card-title">📌 Tugas Mendesak</h2>
+      <a href="/tasks" class="btn-link">Lihat Semua →</a>
+    </div>
+    <div class="task-list">
+      <% recentTasks.forEach(task => {
+        const dl = daysLeft(task.deadline);
+      %>
+      <div class="task-item task-item--<%= task.priority %>" data-id="<%= task.id %>">
+        <div class="task-check">
+          <input type="checkbox" class="task-checkbox" data-id="<%= task.id %>"
+            <%= task.status === 'done' ? 'checked' : '' %> />
+        </div>
+        <div class="task-body">
+          <div class="task-title-row">
+            <span class="task-title <%= task.status === 'done' ? 'done' : '' %>"><%= task.title %></span>
+            <span class="priority-badge priority-<%= task.priority %>"><%= priorityLabel(task.priority) %></span>
+          </div>
+          <div class="task-meta">
+            <span class="task-category"><%= task.category %></span>
+            <span class="task-deadline <%= dl < 0 ? 'overdue' : dl <= 2 ? 'urgent' : '' %>">
+              <%= dl < 0 ? '⚠ Terlambat ' + Math.abs(dl) + ' hari' : dl === 0 ? '⚡ Hari ini' : '📅 ' + dl + ' hari lagi' %>
+            </span>
+            <span class="status-chip status-<%= task.status %>"><%= statusLabel(task.status) %></span>
+          </div>
+        </div>
+      </div>
+      <% }); %>
+    </div>
+  </section>
+
+  <!-- Today's Schedule -->
+  <section class="card schedule-card">
+    <div class="card-header">
+      <h2 class="card-title">📅 Jadwal Hari Ini</h2>
+      <a href="/schedule" class="btn-link">Lihat Semua →</a>
+    </div>
+    <% if (todaySchedule.length === 0) { %>
+    <div class="empty-state">
+      <span>🎉</span>
+      <p>Tidak ada jadwal hari ini. Saatnya istirahat!</p>
+    </div>
+    <% } else { %>
+    <div class="timeline">
+      <% todaySchedule.forEach(item => { %>
+      <div class="timeline-item" style="--item-color: <%= item.color %>">
+        <div class="timeline-time">
+          <span class="time-start"><%= item.time %></span>
+          <span class="time-end"><%= item.endTime %></span>
+        </div>
+        <div class="timeline-connector">
+          <div class="timeline-dot"></div>
+          <div class="timeline-line"></div>
+        </div>
+        <div class="timeline-content">
+          <span class="schedule-title"><%= item.title %></span>
+          <span class="schedule-loc">📍 <%= item.location %></span>
+          <span class="schedule-type type-<%= item.type %>"><%= item.type %></span>
+        </div>
+      </div>
+      <% }); %>
+    </div>
+    <% } %>
+  </section>
+</div>
+
+<!-- Task Distribution Chart (SVG) -->
+<section class="card chart-card">
+  <div class="card-header">
+    <h2 class="card-title">📊 Distribusi Tugas</h2>
+  </div>
+  <div class="chart-container">
+    <!-- Donut Chart SVG -->
+    <div class="donut-chart-wrapper">
+      <%
+        const total = stats.total;
+        const r = 60;
+        const circ = 2 * Math.PI * r;
+        const doneLen = (stats.done / total) * circ;
+        const progressLen = (stats.inProgress / total) * circ;
+        const todoLen = (stats.todo / total) * circ;
+        const quarterCirc = circ / 4;
+      %>
+      <svg viewBox="0 0 160 160" class="donut-svg">
+        <!-- Background -->
+        <circle cx="80" cy="80" r="<%= r %>" fill="none" stroke="#e5e7eb" stroke-width="22"/>
+        <!-- Done (green) -->
+        <circle cx="80" cy="80" r="<%= r %>" fill="none" stroke="#10b981" stroke-width="22"
+          stroke-dasharray="<%= doneLen.toFixed(2) %> <%= circ.toFixed(2) %>"
+          stroke-dashoffset="<%= quarterCirc.toFixed(2) %>"
+          style="transform-origin:center; transform:rotate(-90deg)" />
+        <!-- In Progress (purple) -->
+        <circle cx="80" cy="80" r="<%= r %>" fill="none" stroke="#8b5cf6" stroke-width="22"
+          stroke-dasharray="<%= progressLen.toFixed(2) %> <%= circ.toFixed(2) %>"
+          stroke-dashoffset="<%= (quarterCirc - doneLen).toFixed(2) %>"
+          style="transform-origin:center; transform:rotate(-90deg)" />
+        <!-- Center text -->
+        <text x="80" y="74" text-anchor="middle" class="donut-center-value"><%= stats.completionRate %>%</text>
+        <text x="80" y="92" text-anchor="middle" class="donut-center-label">Selesai</text>
+      </svg>
+    </div>
+
+    <div class="chart-legend">
+      <div class="legend-item">
+        <span class="legend-dot" style="background:#10b981"></span>
+        <span class="legend-label">Selesai</span>
+        <span class="legend-value"><%= stats.done %> tugas</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot" style="background:#8b5cf6"></span>
+        <span class="legend-label">Sedang Dikerjakan</span>
+        <span class="legend-value"><%= stats.inProgress %> tugas</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot" style="background:#cbd5e1"></span>
+        <span class="legend-label">Belum Mulai</span>
+        <span class="legend-value"><%= stats.todo %> tugas</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot" style="background:#ef4444"></span>
+        <span class="legend-label">Terlambat</span>
+        <span class="legend-value"><%= stats.overdue %> tugas</span>
+      </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    <div class="category-breakdown">
+      <h3 class="breakdown-title">Progres per Kategori</h3>
+      <%
+        const categories = {};
+        tasks.forEach(t => {
+          if (!categories[t.category]) categories[t.category] = { total: 0, done: 0 };
+          categories[t.category].total++;
+          if (t.status === 'done') categories[t.category].done++;
+        });
+      %>
+      <% Object.entries(categories).forEach(([cat, data]) => { %>
+      <div class="category-row">
+        <span class="category-name"><%= cat %></span>
+        <div class="category-bar-wrap">
+          <div class="category-bar" style="width: <%= Math.round((data.done/data.total)*100) %>%"></div>
+        </div>
+        <span class="category-count"><%= data.done %>/<%= data.total %></span>
+      </div>
+      <% }); %>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
